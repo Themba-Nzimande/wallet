@@ -7,6 +7,7 @@
     using Microsoft.Extensions.Configuration;
     using Microsoft.IdentityModel.Tokens;
     using WebApplication1.Controllers.Login.DTOs;
+    using WebApplication1.helpers;
     using WebApplication1.Repos.Accounts;
     using WebApplication1.Repos.Users;
 
@@ -25,6 +26,8 @@
 
         private readonly IAccountsRepo _accountsRepo;
 
+        private EncryptionHelper encryptionHelper;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LoginController"/> class.
@@ -37,6 +40,7 @@
             this._configuration = configuration;
             this._userRepo = userRepo;
             this._accountsRepo = accountsRepo;
+            this.encryptionHelper = new EncryptionHelper(this._configuration);
         }
 
 
@@ -50,7 +54,7 @@
         public IActionResult Login(string email, string password)
         {
             var userExistsCheck = this._userRepo.GetUsers(email).FirstOrDefault();
-            if (userExistsCheck != null && userExistsCheck.User_password == password)
+            if (userExistsCheck != null && this.encryptionHelper.DecryptString(userExistsCheck.User_password) == password)
             {
                 var issuer = this._configuration.GetValue<string>("Jwt:Issuer");
                 var audience = this._configuration.GetValue<string>("Jwt:Audience");
@@ -94,7 +98,7 @@
             var newuser = new Models.User()
             {
                 Email = newUserDTO.Email,
-                User_password = newUserDTO.Password,
+                User_password = this.encryptionHelper.EncryptString(newUserDTO.Password),
             };
 
             var newAccount = new Models.Account()
